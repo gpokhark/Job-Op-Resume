@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "ScraplingServer": {
+      "type": "stdio",
+      "command": "D:\\github\\Job-Op-Resume\\.venv\\Scripts\\scrapling.exe",
+      "args": [
+        "mcp"
+      ],
+      "env": {}
+    }
+  }
+}

@@ -1,0 +1,13 @@
+[project]
+name = "job-op-resume"
+version = "0.1.0"
+description = "Add your description here"
+requires-python = ">=3.12"
+dependencies = [
+    "docx2pdf>=0.1.8",
+    "python-docx>=1.2.0",
+    "scrapling[mcp]",
+]
+
+[tool.uv.sources]
+scrapling = { git = "https://github.com/D4Vinci/Scrapling" }

@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File \"D:\\github\\Job-Op-Resume\\scripts\\convert_resume.ps1\""
+          }
+        ]
+      }
+    ]
+  }
+}
