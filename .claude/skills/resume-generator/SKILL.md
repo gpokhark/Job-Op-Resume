@@ -132,7 +132,9 @@ Use more bullets to fill the page — do not leave large blank areas. Aim for th
 
 ---
 
-## Step 7 — Write the Resume
+## Step 7 — Draft the Resume
+
+**Output the full resume as text in your response. Do NOT call the Write tool yet — saving happens only after Step 8 review passes.**
 
 Use this exact formatting structure:
 
@@ -176,7 +178,55 @@ Formatting notes:
 
 ---
 
-## Step 8 — Save the File
+## Step 8 — Inline Review Loop (run before saving)
+
+Review the draft you just produced entirely within your current context. Do not spawn a subagent — all information is already available.
+
+### A. Count words
+
+Count the content words in the draft (exclude markdown symbols: `#`, `*`, `**`, URLs, pipe `|` separators). Compare to the target for the selected page size:
+
+| Page size | Word count target | Minimum to pass |
+|---|---|---|
+| 1 page | 500–650 words | 500 |
+| 1.5 pages | 750–950 words | 750 |
+| 2 pages | 1000–1300 words | 1000 |
+
+State the count explicitly: _"Word count: ~540 — PASS"_ or _"Word count: ~390 — FAIL (need ~110 more words)"_.
+
+### B. Check quality — mark each item PASS or FAIL
+
+- [ ] Word count within target range for selected page size
+- [ ] Top 10 JD keywords addressed where person has real matching experience
+- [ ] No fabricated skills, tools, certifications, metrics, or experience
+- [ ] No generic filler or passive language ("responsible for," "assisted with," "worked on," "helped")
+- [ ] Every bullet starts with a strong action verb
+- [ ] Bullets are accomplishments/results — not task descriptions or duty lists
+- [ ] Recent roles (past 6 years) are at the **upper end** of the bullet count range
+- [ ] No role heading appears with zero bullets beneath it
+- [ ] JD terminology mirrored verbatim in relevant bullets
+- [ ] Education section matches page size rules (1-page: degrees only, no nanodegrees/online certs)
+- [ ] Filename will include correct page size suffix (omit for 1-page default)
+
+### C. Fix failing items (one iteration only)
+
+If any item is FAIL:
+1. List each issue precisely: _"Ford bullets 2 & 3 start with passive 'was responsible for'"_, _"word count 390 — add ~110 words to Valeo role"_
+2. Rewrite **only the failing sections** inline — do not regenerate the entire resume
+3. Re-state the updated word count and confirm each fixed item now passes
+
+**Maximum one fix pass.** If a second issue remains after fixing, proceed to Step 9 and note the remaining issue to the user.
+
+### D. Confirm review outcome
+
+State one of:
+- _"Review passed — proceeding to save."_
+- _"Review passed after one fix — proceeding to save."_
+- _"One issue remains after fix pass: [brief note]. Saving best-effort version."_
+
+---
+
+## Step 9 — Save the File
 
 Determine the person's last name from the resume header.
 
@@ -197,26 +247,6 @@ Where:
 - 2 page: `output/Google/Smith_Resume_Google_2p_2026-05-10.md`
 
 The post-tool hook runs automatically after the Write tool saves the file — it converts `.md` to `.docx` and `.pdf` in the same directory.
-
----
-
-## Quality Checklist
-
-Before saving, confirm:
-- [ ] Page size matches what the user requested (default: 1 page)
-- [ ] Top 10 JD keywords addressed where the person has real experience
-- [ ] No fabricated skills, tools, certifications, metrics, or experience
-- [ ] No generic filler; no passive language ("responsible for," "assisted with")
-- [ ] Every bullet starts with a strong action verb
-- [ ] Bullets focus on accomplishments + results, not task lists
-- [ ] Metrics used wherever available in source; scope/scale used otherwise
-- [ ] Recent roles (past 6 years): ≥2 bullets each (1-page) / ≥3 bullets (1.5–2 page)
-- [ ] No role appears with a heading but zero bullets
-- [ ] Bullets reordered — most JD-relevant accomplishment first
-- [ ] JD terminology mirrored in relevant bullets
-- [ ] 1-page: No short courses or online certifications in Education
-- [ ] Word count within target range for selected page size
-- [ ] Filename includes page size suffix if not 1-page default
 
 ---
 
