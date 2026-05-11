@@ -710,13 +710,16 @@ wheels/
 # Virtual environments
 .venv
 
+# Claude local config (personal data — do not share)
+CLAUDE.local.md
+
 # Ignore output folder
 output
 
 # Ignore Resumes
 resume/Gaurav_Resume_1_2025-11-16.docx
 resume/Gaurav_Resume_1_2025-11-16.md
-resume/main_resume_2025-11-16.md
-resume/Review_Evidence_2026-05-10.md
+resume/main_resume_*.md
+resume/Review_Evidence_*.md
 
 
