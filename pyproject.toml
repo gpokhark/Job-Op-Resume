@@ -7,7 +7,7 @@ dependencies = [
     "docx2pdf>=0.1.8",
     "pypdf>=6.11.0",
     "python-docx>=1.2.0",
-    "scrapling[mcp]",
+    "scrapling[ai]",
 ]
 
 [tool.uv.sources]
