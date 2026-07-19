@@ -14,6 +14,9 @@ Generates a tailored, ATS-compatible US Letter resume in markdown format from a 
 
 ## Step 1 — Gather Inputs
 
+### Applicant contact info
+Read from `CLAUDE.local.md` (already loaded in context — **do not parse from the resume file**). Extract: Name, Email, Phone, LinkedIn, GitHub. If `CLAUDE.local.md` is absent or has no contact section, fall back to reading the top 3 lines of the main resume file.
+
 ### Main resume file
 Use the Glob tool to find the latest main resume in `resume/main_resume_*.md` within this project. Pick the file with the most recent date in its name. If no file matches, ask the user: _"Please provide the path to your main resume file."_
 
@@ -36,11 +39,11 @@ Default: `output/<Company_Name>/` where `<Company_Name>` is derived from the JD 
 ## Step 2 — Read and Parse the Source Resume
 
 Read the main resume file. Extract:
-- **Personal details**: name, email, phone, LinkedIn, GitHub (or equivalent links)
 - **All roles**: title, company, location, date range, bullet points
 - **Education**: degrees, institutions, dates, GPA (if present)
 - **Skills / tools / certifications**: any listed
 - **Projects / other sections**: anything present in the source
+- Skip personal details (name, email, phone, LinkedIn, GitHub) — those come from `CLAUDE.local.md` per Step 1.
 
 Identify the **past-6-years cutoff date** (today minus 6 years). Classify each role as recent or older accordingly.
 
@@ -91,11 +94,13 @@ Apply these universally across all page sizes.
 
 ### Bullet count targets
 
-Use more bullets to fill the page — do not leave large blank areas. Aim for the upper end of each range when the role has relevant accomplishments.
+> **CSS capacity (measured):** Each 25-word bullet renders to ~50px in Chromium. A 3-role resume at 4+4+3=11 bullets fills ~930px (97%); at 5+5+4=14 bullets it hits ~1100px (overflow). **Always start the 1-page draft at 4 bullets per recent role and 3 for the oldest included role.** Expand only after measuring `"underflow"`. Never start with 5+ and trim — that wastes one full measurement cycle.
+
+Section headings and their spacing consume significant vertical space that word count does not capture. The table below shows outer limits, not starting targets.
 
 | Role recency | 1 page | 1.5 pages | 2 pages |
 |---|---|---|---|
-| Recent (past 6 years) | 3–6 bullets | 4–6 bullets | 4–6 bullets |
+| Recent (past 6 years) | **4 bullets to start; 5–6 only after underflow** | 4–6 bullets | 4–6 bullets |
 | Older roles (pre-cutoff) | Omit or list with no bullets | 2–4 bullets | 2–4 bullets |
 
 ### Role inclusion rules
@@ -109,9 +114,12 @@ Use more bullets to fill the page — do not leave large blank areas. Aim for th
 ### Content rules per page size
 
 **1 page:**
-- Summary: 3–4 bullets
-- Target ~500–650 words total
+- Summary: **4 bullets** (fixed — not a range)
+- Recent roles: **4 bullets each to start** — add a 5th only if measurement returns `"underflow"`
+- **Each bullet must average 20–28 words** — short bullets (under 15 words) are the primary cause of white space; elaborate them with scope, method, or outcome rather than adding more bullets
+- Target ~560–660 words total for a 3-recent-role resume
 - Education: Degrees only (no short courses, online certifications, or nanodegrees)
+- **Technical Skills block (2 lines max):** after Education, add a compact inline block of the most JD-relevant tools and technologies from the source resume. Use a simple format: `**Category:** Tool1, Tool2, Tool3`. Maximum 2 lines. Include only tools genuinely present in the source resume and relevant to the JD — this is ATS-critical and fills the bottom naturally without padding.
 - Drop older roles freely to stay within limit
 - No Projects section
 
@@ -132,121 +140,226 @@ Use more bullets to fill the page — do not leave large blank areas. Aim for th
 
 ---
 
-## Step 7 — Draft the Resume
+## Step 7 — Draft the Resume as HTML
 
-**Output the full resume as text in your response. Do NOT call the Write tool yet — saving happens only after Step 8 review passes.**
+**Write the full resume as a self-contained HTML file. Do NOT call the Write tool yet — saving happens only after Step 8 measurement passes.**
 
-Use this exact formatting structure:
+Use this exact HTML template. Fill in the bracketed placeholders with the tailored resume content. Do not change the CSS — only fill in the content sections.
 
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 10.5pt;
+    line-height: 1.2;
+    color: #000;
+    width: 7.5in;
+  }
+  .name {
+    font-size: 17pt;
+    font-weight: bold;
+    text-align: center;
+    margin-bottom: 2pt;
+  }
+  .contact {
+    text-align: center;
+    font-size: 9.5pt;
+    margin-bottom: 5pt;
+  }
+  .section {
+    font-size: 10.5pt;
+    font-weight: bold;
+    text-transform: uppercase;
+    border-bottom: 1pt solid #000;
+    margin-top: 5pt;
+    margin-bottom: 2pt;
+    letter-spacing: 0.4pt;
+  }
+  .role-line {
+    display: flex;
+    justify-content: space-between;
+    font-weight: bold;
+    font-size: 10.5pt;
+    margin-top: 2pt;
+    margin-bottom: 1pt;
+  }
+  .company-line {
+    font-style: italic;
+    font-size: 10pt;
+    margin-bottom: 1pt;
+  }
+  ul {
+    margin-left: 13pt;
+    margin-bottom: 0;
+  }
+  li {
+    margin-bottom: 1.5pt;
+    font-size: 10.5pt;
+    text-align: justify;
+  }
+  .edu-line {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 1.5pt;
+  }
+  .skills-line {
+    font-size: 10pt;
+    margin-bottom: 1.5pt;
+  }
+</style>
+</head>
+<body>
+
+<div class="name">[FULL NAME IN CAPS]</div>
+<div class="contact">[email] | [phone] | [LinkedIn URL] | [GitHub URL]</div>
+
+<div class="section">Summary</div>
+<ul>
+  <li>[Summary bullet 1 — most relevant credential]</li>
+  <li>[Summary bullet 2 — key technical skill matching top JD keyword]</li>
+  <li>[Summary bullet 3 — accomplishment or domain expertise]</li>
+  <li>[Summary bullet 4 — differentiator relevant to this role]</li>
+</ul>
+
+<div class="section">Professional Experience</div>
+
+<div class="role-line"><span>[Job Title]</span><span>[Start Month Year] – [End Month Year or Present]</span></div>
+<div class="company-line">[Company Name], [State], [Country]</div>
+<ul>
+  <li>[Most JD-relevant bullet — action verb + outcome]</li>
+  <li>[Bullet 2]</li>
+  <li>[Bullet 3]</li>
+  <li>[Bullet 4]</li>
+  <li>[Bullet 5]</li>
+</ul>
+
+<div class="role-line"><span>[Job Title]</span><span>[Start Month Year] – [End Month Year]</span></div>
+<div class="company-line">[Company Name], [State], [Country]</div>
+<ul>
+  <li>[Bullet 1]</li>
+  <li>[Bullet 2]</li>
+  <li>[Bullet 3]</li>
+  <li>[Bullet 4]</li>
+  <li>[Bullet 5]</li>
+</ul>
+
+<div class="section">Education</div>
+<div class="edu-line">
+  <span><strong>[Degree]</strong>, <em>[University, State, Country]</em></span>
+  <span>[Month Year] (GPA – X.XX/X.XX)</span>
+</div>
+<div class="edu-line">
+  <span><strong>[Degree]</strong>, <em>[University, Country]</em></span>
+  <span>[Month Year] (GPA – X.XX/X.XX)</span>
+</div>
+
+<div class="section">Technical Skills</div>
+<div class="skills-line"><strong>[Category]:</strong> [Tool1], [Tool2], [Tool3], [Tool4]</div>
+<div class="skills-line"><strong>[Category]:</strong> [Tool1], [Tool2], [Tool3], [Tool4]</div>
+
+</body>
+</html>
 ```
-# **[FULL NAME IN CAPS]**
 
-[email] | [phone] | [LinkedIn URL] | [GitHub or Portfolio URL]
-
-# **SUMMARY**
-
-* [Most relevant credential for this role]
-* [Key technical skill matching top JD keyword]
-* [Accomplishment or domain expertise relevant to role]
-
-# **PROFESSIONAL EXPERIENCE**
-
-## **[Job Title]	[Start Month Year] – [End Month Year or Present]**
-
-### *[Company Name], [State/Region], [Country]*
-
-* [Most JD-relevant accomplishment — action verb + result]
-* [Second bullet]
-* [Third bullet]
-
-## **[Older Job Title]	[Start Month Year] – [End Month Year]**
-
-### *[Company Name], [State/Region], [Country]*
-
-# **EDUCATION**
-
-**[Degree]**, *[University, State, Country]*	[Month Year] [(GPA – X.XX/X.XX if present)]\
-**[Degree]**, *[University, Country]*	[Month Year] [(GPA – X.XX/X.XX if present)]
-```
-
-Formatting notes:
-- Tab character (not spaces) between job title and date range on `##` heading lines
-- Bold all section and role headings with `**`
-- Italicize company/institution lines with `*`
-- Use `*` bullet points (not `-`) for ATS compatibility
-- List roles in reverse chronological order (most recent first)
+Content rules inside the HTML:
+- Each `<li>` bullet: 20–28 words, strong action verb first, accomplishment + outcome
+- No passive language inside tags: no "responsible for," "assisted with"
+- Recent roles: 4 `<li>` bullets each to start; add a 5th only after measuring `"underflow"`
+- Technical Skills: exactly 2 `<div class="skills-line">` lines, JD-relevant tools only
+- Do not alter any CSS values — spacing is calibrated for US Letter fill
 
 ---
 
-## Step 8 — Inline Review Loop (run before saving)
+## Step 8 — Measure Page Fill (Playwright feedback loop)
 
-Review the draft you just produced entirely within your current context. Do not spawn a subagent — all information is already available.
+This step uses `scripts/measure_resume.py` to render the draft in headless Chromium and report actual page count and fill percentage. This replaces word-count guessing with real rendering feedback.
 
-### A. Count words
+### A. Save the draft to a temp path
 
-Count the content words in the draft (exclude markdown symbols: `#`, `*`, `**`, URLs, pipe `|` separators). Compare to the target for the selected page size:
+Save the HTML to `output/[Company_Name]/_draft.html` using the Write tool. This path does **not** match the `*_Resume_*` hook pattern, so no PDF conversion runs yet.
 
-| Page size | Word count target | Minimum to pass |
+### B. Run the measurement script
+
+Start an internal iteration counter at **1** before the first measurement. Increment it by 1 each time you run the script again (after an adjustment). Carry this count forward to Step 10.
+
+```bash
+uv run python scripts/measure_resume.py output/[Company_Name]/_draft.html
+```
+
+The script outputs JSON. Read the `status` and `guidance` fields:
+
+| `status` | Meaning | Action |
 |---|---|---|
-| 1 page | 500–650 words | 500 |
-| 1.5 pages | 750–950 words | 750 |
-| 2 pages | 1000–1300 words | 1000 |
+| `"ok"` | 1 page, ≥88% full | Proceed to Step 9 — save final file |
+| `"overflow"` | >1 page | Trim content — see guidance for line count to remove |
+| `"underflow"` | 1 page, <88% full | Add content — see guidance for line count to add |
 
-State the count explicitly: _"Word count: ~540 — PASS"_ or _"Word count: ~390 — FAIL (need ~110 more words)"_.
+### C. Adjust if needed (one iteration max)
 
-### B. Check quality — mark each item PASS or FAIL
+**Overflow:** Remove the least JD-relevant bullets from the oldest included role first. Shorten bullets that are over 28 words. Do not remove bullets from the most recent role.
 
-- [ ] Word count within target range for selected page size
-- [ ] Top 10 JD keywords addressed where person has real matching experience
-- [ ] No fabricated skills, tools, certifications, metrics, or experience
-- [ ] No generic filler or passive language ("responsible for," "assisted with," "worked on," "helped")
-- [ ] Every bullet starts with a strong action verb
-- [ ] Bullets are accomplishments/results — not task descriptions or duty lists
-- [ ] Recent roles (past 6 years) are at the **upper end** of the bullet count range
-- [ ] No role heading appears with zero bullets beneath it
+**Underflow:** Expand existing bullets — add scope, method, or outcome detail. Add a bullet to the oldest included role if all roles are already at minimum. Do not fabricate content.
+
+After adjusting, overwrite `_draft.html` and run the measurement script again.
+
+**Maximum one adjustment iteration.** If status is still not `"ok"` after one fix, proceed to Step 9 anyway and note the remaining issue to the user.
+
+### D. Quality check (run alongside measurement)
+
+While the script runs, confirm:
+- [ ] No fabricated skills, tools, certifications, or metrics
+- [ ] No passive language ("responsible for," "assisted with," "worked on")
+- [ ] Every `<li>` starts with a strong action verb
 - [ ] JD terminology mirrored verbatim in relevant bullets
-- [ ] Education section matches page size rules (1-page: degrees only, no nanodegrees/online certs)
-- [ ] Filename will include correct page size suffix (omit for 1-page default)
-
-### C. Fix failing items (one iteration only)
-
-If any item is FAIL:
-1. List each issue precisely: _"Ford bullets 2 & 3 start with passive 'was responsible for'"_, _"word count 390 — add ~110 words to Valeo role"_
-2. Rewrite **only the failing sections** inline — do not regenerate the entire resume
-3. Re-state the updated word count and confirm each fixed item now passes
-
-**Maximum one fix pass.** If a second issue remains after fixing, proceed to Step 9 and note the remaining issue to the user.
-
-### D. Confirm review outcome
-
-State one of:
-- _"Review passed — proceeding to save."_
-- _"Review passed after one fix — proceeding to save."_
-- _"One issue remains after fix pass: [brief note]. Saving best-effort version."_
+- [ ] Education: degrees only for 1-page (no nanodegrees/online certs)
+- [ ] Technical Skills: ≤2 lines, all tools present in source resume
 
 ---
 
-## Step 9 — Save the File
+## Step 9 — Save the Final File
 
-Determine the person's last name from the resume header.
+Once measurement status is `"ok"` (or after one iteration), save the final HTML to:
 
-Save to:
 ```
-output/[Company_Name]/[LastName]_Resume_[Company]_[PageSuffix][YYYY-MM-DD].md
+output/[Company_Name]/[LastName]_Resume_[Company]_[PageSuffix][YYYY-MM-DD].html
 ```
 
 Where:
-- `output/[Company_Name]/` = company name with spaces replaced by underscores, special characters stripped (e.g., `output/Apple/`, `output/Woven_By_Toyota/`). If the JD file is already in an `output/<Company_Name>/` folder, use that same folder path.
-- `[LastName]` = person's last name extracted from the resume header
-- `[Company]` = company name from the JD (shorten if long) or a short context descriptor (e.g., `ADAS_Engineer`, `IEEE_Committee`)
-- `[PageSuffix]` = omit for 1-page; `_1p5_` for 1.5-page; `_2p_` for 2-page
+- `[Company_Name]` folder: spaces → underscores, special characters stripped
+- `[LastName]`: from the resume name header
+- `[Company]`: company name from JD (shorten if long)
+- `[PageSuffix]`: omit for 1-page; `_1p5_` for 1.5-page; `_2p_` for 2-page
+
+The PostToolUse hook detects `*_Resume_*.html`, runs `measure_resume.py --save-pdf`, and saves the PDF alongside the HTML automatically. No manual conversion needed.
 
 **Example filenames:**
-- 1 page: `output/Google/Smith_Resume_Google_2026-05-10.md`
-- 1.5 page: `output/Google/Smith_Resume_Google_1p5_2026-05-10.md`
-- 2 page: `output/Google/Smith_Resume_Google_2p_2026-05-10.md`
+- 1 page: `output/Honda/Pokharkar_Resume_Honda_2026-05-10.html`
+- 1.5 page: `output/Honda/Pokharkar_Resume_Honda_1p5_2026-05-10.html`
 
-The post-tool hook runs automatically after the Write tool saves the file — it converts `.md` to `.docx` and `.pdf` in the same directory.
+After saving, report the measurement result to the user:
+_"Saved. PDF generated: 1 page, 94% full."_
+
+---
+
+## Step 10 — Write Iteration Sidecar
+
+Before saving the final HTML in Step 9 (immediately before the Write tool call), write a small JSON file so the PostToolUse hook can log the iteration count without any extra Claude reasoning:
+
+```
+output/[Company_Name]/_iterations.json
+```
+
+Content (replace N with your iteration counter from Step 8):
+```json
+{"iterations": N}
+```
+
+Use the Write tool. The hook reads this file, appends the full row to `output/resume_log.csv`, then deletes `_iterations.json` automatically. You do not need to read or write the CSV yourself.
 
 ---
 

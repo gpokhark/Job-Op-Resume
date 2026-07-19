@@ -42,9 +42,9 @@ uv sync          # install/update deps
 uv add <pkg>     # add a package
 ```
 
-Key packages: `python-docx`, `docx2pdf`, `scrapling` (from GitHub HEAD — PyPI version lacks MCP support).
+Key packages: `python-docx`, `docx2pdf`, `scrapling[ai]` (from GitHub HEAD — PyPI version lacks MCP support). The `ai` extra pulls in `mcp`, `click`, `markdownify`, and the `fetchers` extra (Playwright/Patchright). After `uv sync`, run `uv run scrapling install` once to download the Playwright/Patchright browser binaries — required for `fetch`/`stealthy_fetch`.
 
-The ScraplingServer MCP is configured in `.mcp.json` using the absolute venv binary path (`.venv\Scripts\scrapling.exe`). It is project-scoped and must be accessed via `ToolSearch` → deferred tool load before calling `mcp__ScraplingServer__*` tools.
+The ScraplingServer MCP is configured in `.mcp.json` using `uv run scrapling mcp` (not an absolute binary path), so it works unmodified on Windows, macOS, and Linux — `uv` resolves the project-local `.venv` from the working directory. It is project-scoped and must be accessed via `ToolSearch` → deferred tool load before calling `mcp__ScraplingServer__*` tools.
 
 ## Resume markdown format
 
@@ -76,4 +76,4 @@ Section headings recognized by regex: `SUMMARY`, `PROFESSIONAL`, `EDUCATION`, `F
 
 ## MCP server
 
-ScraplingServer is configured in `.mcp.json` (project scope). If it shows as disconnected, verify `.venv\Scripts\scrapling.exe` exists (`uv sync` rebuilds it). MCP tool schemas are deferred — use `ToolSearch` with `select:mcp__ScraplingServer__get` (etc.) before calling them.
+ScraplingServer is configured in `.mcp.json` (project scope) via `uv run scrapling mcp`. If it shows as disconnected, run `uv sync` (rebuilds `.venv`) and `uv run scrapling install` (installs Playwright/Patchright browser binaries). MCP tool schemas are deferred — use `ToolSearch` with `select:mcp__ScraplingServer__get` (etc.) before calling them.
