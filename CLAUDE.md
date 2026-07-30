@@ -12,6 +12,7 @@ This repo is a job-application workflow: scrape job listings, then generate tail
 |---|---|---|
 | `/job-scraper <url>` | Haiku | Fetches a job listing via ScraplingServer MCP, extracts structured fields, writes `JD_<Company>_<Title>_<YYYY-MM-DD>.txt` to project root |
 | `/resume-generator for JD in @<file.txt>` | (default) | Reads `resume/main_resume_*.md` (most recent date), tailors a 1-page resume, writes `resume/<LastName>_Resume_<Company>_<Date>.md` |
+| `/outreach-writer` | (default) | Reads the tailored resume + JD for a company, writes a Dale Carnegie–style outreach email (`<LastName>_Email_<Company>_<Date>.txt`) and/or a cover letter formatted to match the applicant's reference letter (`Gaurav_Cover-<Company>-<Title>.pdf`) |
 
 Skill definitions live in `.claude/skills/`. The job-scraper skill uses `mcp__ScraplingServer__get` first, escalating to `mcp__ScraplingServer__fetch` (Playwright, `wait:2000`) and `mcp__ScraplingServer__stealthy_fetch` for JS-heavy or bot-protected sites.
 
@@ -71,6 +72,8 @@ Section headings recognized by regex: `SUMMARY`, `PROFESSIONAL`, `EDUCATION`, `F
 | Review evidence (IEEE/SAE) | `Review_Evidence_<YYYY-MM-DD>.md` | `resume/` |
 | Job description | `JD_<Company>_<Title>_<YYYY-MM-DD>.txt` | `output/<Company_Name>/` |
 | Tailored resume | `<LastName>_Resume_<Company>_<Date>.md` | `output/<Company_Name>/` |
+| Outreach email | `<LastName>_Email_<Company>_<YYYY-MM-DD>.txt` | `output/<Company_Name>/` |
+| Cover letter | `Gaurav_Cover-<Company>-<Title>.pdf` (+ `.html` build artifact) | `output/<Company_Name>/` |
 
 `<Company_Name>` is the company name with spaces replaced by underscores and special characters stripped (e.g., `output/Apple/`, `output/Woven_By_Toyota/`). The JD file also includes a `Job URL:` field in its header so the source link is preserved alongside the extracted content. Skills always pick the file with the most recent date in the name.
 
