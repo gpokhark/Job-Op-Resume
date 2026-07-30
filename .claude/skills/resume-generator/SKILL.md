@@ -82,6 +82,7 @@ Apply these universally across all page sizes.
 - **No paragraphs**: Bullets only — one concise line per bullet
 - **No task lists**: Only accomplishments and outcomes; not every daily duty
 - **No generic filler**: Never use "results-driven," "dynamic," "passionate," "proven track record," "team player," "strong communicator"
+- **No em dashes**: Never use em dashes (—) in bullet or summary text; use a comma, "and," "including," or a semicolon instead
 
 ### Tailoring
 - Include JD keywords naturally in bullet text where the person's real experience supports it
@@ -278,6 +279,8 @@ Content rules inside the HTML:
 ## Step 8 — Measure Page Fill (Playwright feedback loop)
 
 This step uses `scripts/measure_resume.py` to render the draft in headless Chromium and report actual page count and fill percentage. This replaces word-count guessing with real rendering feedback.
+
+**Page geometry requirement:** every fill-percentage measurement must be taken against a US Letter page (8.5×11") with 0.5" margins on all four sides — `scripts/measure_resume.py` already renders with `format="Letter"` and `margin={top/bottom/left/right: "0.5in"}` by default, so no flags are needed, but confirm this hasn't drifted before trusting a fill-percentage result.
 
 ### A. Save the draft to a temp path
 
