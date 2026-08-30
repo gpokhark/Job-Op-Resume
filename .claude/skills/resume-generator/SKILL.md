@@ -2,9 +2,20 @@
 name: resume-generator
 description: Generate a tailored US Letter resume (1, 1.5, or 2 pages) in markdown format from a provided main resume file and a job description or context. Use this skill whenever asked to create a resume, write a CV, tailor a resume to a job, customize for a company or role, produce a resume from a job description, or prepare a job application. Triggers on phrases like "generate resume for [company]", "create resume", "tailor my resume", "write a 2-page resume for [JD]", or any request that includes a job description and asks for a resume. Always invoke this skill — never create a resume without it.
 model: claude-haiku-4-5-20251001
+metadata:
+  version: 1.3.0
 ---
 
 # Resume Generator
+
+**Version:** 1.3.0 · Last updated 2026-07-30
+
+| Version | Date | Change |
+|---|---|---|
+| 1.3.0 | 2026-07-30 | Updates to the resume generator skill and CLAUDE.md file. |
+| 1.2.0 | 2026-05-10 | Switched to the HTML draft + Playwright measurement automation flow. |
+| 1.1.0 | 2026-05-10 | Added a review step to the resume generator. |
+| 1.0.0 | 2026-05-10 | First commit working skill. |
 
 Generates a tailored, ATS-compatible US Letter resume in markdown format from a source resume file. A post-tool hook automatically converts the saved `.md` to `.docx` and `.pdf` — no conversion work needed from you.
 

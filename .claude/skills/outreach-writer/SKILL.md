@@ -1,9 +1,17 @@
 ---
 name: outreach-writer
 description: Write a short Dale Carnegie–style outreach email to a hiring manager or recruiter, and/or a tailored cover letter, based on the applicant's tailored resume and a job description. Use whenever asked to "write an email to the hiring manager/recruiter", "draft an outreach email", "write a cover letter", "generate a cover letter for [company]", or any request to reach out about a job application. Triggers on phrases combining an email or cover letter with a company, role, or job description. Always invoke this skill — never hand-write outreach copy without it.
+metadata:
+  version: 1.0.0
 ---
 
 # Outreach Writer
+
+**Version:** 1.0.0 · Last updated 2026-07-30
+
+| Version | Date | Change |
+|---|---|---|
+| 1.0.0 | 2026-07-30 | Initial skill: outreach email (Dale Carnegie style, .txt) and cover letter (matched to reference PDF format, rendered via HTML → PDF). |
 
 Generates two possible deliverables from the same inputs — an applicant's tailored resume and a job description:
 
