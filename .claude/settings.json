@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File \"D:\\github\\Job-Op-Resume\\scripts\\convert_resume.ps1\""
+            "command": "uv run --directory \"${CLAUDE_PROJECT_DIR}\" python \"${CLAUDE_PROJECT_DIR}/scripts/convert_resume.py\""
           }
         ]
       }
