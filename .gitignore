@@ -716,6 +716,9 @@ CLAUDE.local.md
 # Ignore output folder
 output
 
+# Playwright MCP debug artifacts (page snapshots, console logs)
+.playwright-mcp/
+
 # Ignore Resumes
 resume/Gaurav_Resume_1_2025-11-16.docx
 resume/Gaurav_Resume_1_2025-11-16.md
