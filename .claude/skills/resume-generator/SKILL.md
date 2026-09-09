@@ -3,15 +3,17 @@ name: resume-generator
 description: Generate a tailored US Letter resume (1, 1.5, or 2 pages) in markdown format from a provided main resume file and a job description or context. Use this skill whenever asked to create a resume, write a CV, tailor a resume to a job, customize for a company or role, produce a resume from a job description, or prepare a job application. Triggers on phrases like "generate resume for [company]", "create resume", "tailor my resume", "write a 2-page resume for [JD]", or any request that includes a job description and asks for a resume. Always invoke this skill — never create a resume without it.
 model: claude-haiku-4-5-20251001
 metadata:
-  version: 1.3.0
+  version: 1.5.0
 ---
 
 # Resume Generator
 
-**Version:** 1.3.0 · Last updated 2026-07-30
+**Version:** 1.5.0 · Last updated 2026-09-08
 
 | Version | Date | Change |
 |---|---|---|
+| 1.5.0 | 2026-09-08 | Two changes to Step 9's filename: (1) switched the filename token from `_Resume_` to `_CV_` going forward (legacy `_Resume_` files still recognized by the hook); (2) made `[RoleToken]` compact instead of spelling out full words — prefer a recognized short role acronym (`TPM`, `STE`, `SWE`, `PM`, `QE`) when one applies, otherwise truncate each significant word to ~3 letters (`ADASTesEng`), since the full-word PascalCase version from 1.4.0 made filenames too long. |
+| 1.4.0 | 2026-09-08 | Added a mandatory `[RoleToken]` component to the saved filename (Step 9) — a short PascalCase tag derived from the JD title, present for every page size — after a same-day second resume for a different role at the same company silently overwrote an earlier one under the old `[Company]_[PageSuffix][Date]` pattern, which had no way to distinguish two roles. Also noted the PostToolUse hook's `resume_log.csv` logging picks the most-recently-modified `JD_*.txt` in the folder, which can mis-attribute the role when a company folder holds more than one JD. |
 | 1.3.0 | 2026-07-30 | Updates to the resume generator skill and CLAUDE.md file. |
 | 1.2.0 | 2026-05-10 | Switched to the HTML draft + Playwright measurement automation flow. |
 | 1.1.0 | 2026-05-10 | Added a review step to the resume generator. |
@@ -340,20 +342,25 @@ While the script runs, confirm:
 Once measurement status is `"ok"` (or after one iteration), save the final HTML to:
 
 ```
-output/[Company_Name]/[LastName]_Resume_[Company]_[PageSuffix][YYYY-MM-DD].html
+output/[Company_Name]/[LastName]_CV_[Company]_[RoleToken]_[PageSuffix][YYYY-MM-DD].html
 ```
 
 Where:
 - `[Company_Name]` folder: spaces → underscores, special characters stripped
 - `[LastName]`: from the resume name header
 - `[Company]`: company name from JD (shorten if long)
+- `[RoleToken]`: **always included, for every page size** — a *compact* tag derived from the JD's Job Title, so two different roles tailored for the same company on the same day never collide on filename (this happened once: a second same-day OpenAI resume silently overwrote an earlier one because the old pattern had no role component) and so the filename doesn't balloon in length. Identify the significant words in the first 2–3 words of the title (drop filler words — "a," "the," "of," "and," "for" — and stop at the first comma, pipe, or dash that introduces a sub-title/qualifier), then derive the token in two steps:
+  1. **Prefer a recognized short role acronym** if those words commonly go by one — e.g. "Technical Program Manager" → `TPM`, "Systems Test Engineer" → `STE`, "Software Engineer" → `SWE`, "Program Manager" / "Product Manager" → `PM`, "Quality Engineer" → `QE`. Use judgment; this is a filename tag, not a legal identifier, so a reasonable, readable acronym is fine even if not perfectly unambiguous.
+  2. **Otherwise, abbreviate word-by-word**: keep any word that is already an all-caps domain acronym in the title as-is (e.g. `ADAS`), and truncate every other significant word to its first ~3 letters, capitalizing just the first letter (e.g. `Tes`, `Eng`). Concatenate with no separator.
+  Examples: "Technical Program Manager, Sensors" → `TPM`; "Systems Test Engineer, End-to-End Validation" → `STE`; "ADAS Test Engineer" → `ADASTesEng`. Keep the final token short (roughly 3–10 characters) — if it's still long, drop the least distinctive word rather than spelling more out. If the exact same token would already exist for this company/date/page-size (rare), append `2`, `3`, etc.
 - `[PageSuffix]`: omit for 1-page; `_1p5_` for 1.5-page; `_2p_` for 2-page
 
-The PostToolUse hook detects `*_Resume_*.html`, runs `measure_resume.py --save-pdf`, and saves the PDF alongside the HTML automatically. No manual conversion needed.
+The PostToolUse hook detects `*_CV_*.html` (and, for files saved before 2026-09-08, the legacy `*_Resume_*.html` token), runs `measure_resume.py --save-pdf`, and saves the PDF alongside the HTML automatically. No manual conversion needed. Note: the hook also logs to `resume_log.csv` by grabbing whichever `JD_*.txt` in the folder has the most recent mtime — if a company folder holds JD files for more than one role, save the resume for whichever JD you scraped most recently *last* (or double-check the log row after saving) since the hook can't otherwise tell which JD belongs to which resume.
 
 **Example filenames:**
-- 1 page: `output/Honda/Pokharkar_Resume_Honda_2026-05-10.html`
-- 1.5 page: `output/Honda/Pokharkar_Resume_Honda_1p5_2026-05-10.html`
+- 1 page: `output/Honda/Pokharkar_CV_Honda_ADASTesEng_2026-05-10.html`
+- 1.5 page: `output/Honda/Pokharkar_CV_Honda_ADASTesEng_1p5_2026-05-10.html`
+- 2 page: `output/OpenAI/Pokharkar_CV_OpenAI_TPM_2p_2026-09-08.html`
 
 After saving, report the measurement result to the user:
 _"Saved. PDF generated: 1 page, 94% full."_

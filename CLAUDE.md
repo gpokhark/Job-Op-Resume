@@ -11,8 +11,8 @@ This repo is a job-application workflow: scrape job listings, then generate tail
 | Command | Model | What it does |
 |---|---|---|
 | `/job-scraper <url>` | Haiku | Fetches a job listing via ScraplingServer MCP (falling back to Playwright MCP for client-rendered/bot-protected sites), extracts structured fields, writes `output/<Company_Name>/JD_<Company>_<Title>_<YYYY-MM-DD>.txt`. Given multiple URLs at once, runs **Batch Fit-Scoring Mode**: one subagent per URL scrapes the JD and scores it against the latest `main_resume_*.md`, writing `output/<Company_Name>/fit-report.md`; results are consolidated into a ranking table. |
-| `/resume-generator for JD in @<file.txt>` | (default) | Reads `resume/main_resume_*.md` (most recent date), tailors a resume (1 page by default; 1.5 or 2 page on request), drafts it as HTML, iterates against Playwright-measured page fill, and writes `output/<Company_Name>/<LastName>_Resume_<Company>_<Date>.html` |
-| `/outreach-writer` | (default) | Reads the tailored resume + JD for a company, writes a Dale Carnegie–style outreach email (`<LastName>_Email_<Company>_<Date>.txt`) and/or a cover letter formatted to match the applicant's reference letter (`Gaurav_Cover-<Company>-<Title>.pdf`) |
+| `/resume-generator for JD in @<file.txt>` | (default) | Reads `resume/main_resume_*.md` (most recent date), tailors a resume (1 page by default; 1.5 or 2 page on request), drafts it as HTML, iterates against Playwright-measured page fill, and writes `output/<Company_Name>/<LastName>_CV_<Company>_<RoleToken>_<Date>.html` |
+| `/outreach-writer` | (default) | Reads the tailored CV + JD for a company, writes a Dale Carnegie–style outreach email (`<LastName>_Email_<Company>_<Date>.txt`) and/or a cover letter formatted to match the applicant's reference letter (`Gaurav_CL-<Company>-<RoleToken>_<Date>.pdf` + `.txt`) |
 
 Skill definitions live in `.claude/skills/`. The job-scraper skill uses `mcp__ScraplingServer__get` first, escalating to `mcp__ScraplingServer__fetch` (Playwright, `wait:2000`), `mcp__ScraplingServer__stealthy_fetch`, and finally Playwright MCP directly for sites the first three attempts can't render.
 
@@ -20,7 +20,7 @@ Each `SKILL.md` carries a `metadata.version` (semver) in its frontmatter and a c
 
 ## Conversion pipeline
 
-Saving any `*_Resume_*.md` or `*_Resume_*.html` file triggers the PostToolUse hook automatically:
+Saving any `*_CV_*.md` or `*_CV_*.html` file triggers the PostToolUse hook automatically (the older `*_Resume_*` token from before 2026-09-08 is still recognized for backward compatibility, but `/resume-generator` now always saves with the `_CV_` token):
 
 ```
 *.md   →  scripts/build_resume.py    →  *.docx  →  docx2pdf (Word COM/AppleScript)  →  *.pdf
@@ -30,7 +30,7 @@ Saving any `*_Resume_*.md` or `*_Resume_*.html` file triggers the PostToolUse ho
 - **`scripts/build_resume.py`** — python-docx template approach: opens `resume/Gaurav_Resume_1_2025-11-16.docx` as a style template, clears the body XML (keeping `sectPr`), then rebuilds content by classifying each markdown line and applying the matching Word style (`Title`, `Heading 1/2/3`, `List Paragraph`, `Normal`). Strips trailing `\` (pandoc hard-break marker) before processing.
 - **`scripts/convert_resume.py`** — PostToolUse hook script (cross-platform: Windows/macOS/Linux, invoked via `uv run`). Reads tool event JSON from stdin, extracts `file_path`, skips non-resume files, and dispatches to `measure_resume.py` (for `.html`) or `build_resume.py` + `docx2pdf` (for `.md`). The `.md` → `.docx` → PDF path still requires Microsoft Word (COM on Windows, AppleScript on macOS) for the final PDF step — no Word means the `.docx` is produced but PDF conversion is skipped with a message; the `.html` path has no such dependency.
 - **`scripts/log_resume.py`** — appends one row (date, company, role, JD URL, fill %, pages, iterations, filename) to `output/resume_log.csv`. Called automatically from `convert_resume.py` only on the `.html` path, after consuming and deleting the `_iterations.json` sidecar that `/resume-generator` writes before its final save. The legacy `.md` path does not log.
-- The PostToolUse hook matcher is scoped to the **`Write`** tool only (see `.claude/settings.json`) — saving a resume via `cp`, `mv`, or any Bash command will not trigger conversion or logging; always use the Write tool for the final `*_Resume_*` save.
+- The PostToolUse hook matcher is scoped to the **`Write`** tool only (see `.claude/settings.json`) — saving a resume via `cp`, `mv`, or any Bash command will not trigger conversion or logging; always use the Write tool for the final `*_CV_*` save.
 - Page size: US Letter 8.5×11", 0.5" margins all sides. Right tab stop at 10800 twips (7.5") for date alignment.
 
 To manually run conversion (e.g. to test a change to `build_resume.py`):
@@ -76,10 +76,10 @@ Section headings recognized by regex: `SUMMARY`, `PROFESSIONAL`, `EDUCATION`, `F
 | Source resume | `main_resume_<YYYY-MM-DD>.md` | `resume/` |
 | Review evidence (IEEE/SAE) | `Review_Evidence_<YYYY-MM-DD>.md` | `resume/` |
 | Job description | `JD_<Company>_<Title>_<YYYY-MM-DD>.txt` | `output/<Company_Name>/` |
-| Tailored resume | `<LastName>_Resume_<Company>_<Date>.html` (+ `.pdf`; `_1p5_`/`_2p_` inserted before the date for non-default page counts) | `output/<Company_Name>/` |
+| Tailored CV | `<LastName>_CV_<Company>_<RoleToken>_<Date>.html` (+ `.pdf`; `_1p5_`/`_2p_` inserted before the date for non-default page counts). `<RoleToken>` is a compact tag from the JD title — a recognized role acronym where one exists (e.g. `TPM`, `STE`), otherwise each significant word truncated to ~3 letters (e.g. `ADASTesEng`) — always present, so two roles at the same company on the same day never collide on filename or blow past reasonable filename length | `output/<Company_Name>/` |
 | Fit report (batch job-scraper mode) | `fit-report.md` | `output/<Company_Name>/` |
 | Outreach email | `<LastName>_Email_<Company>_<YYYY-MM-DD>.txt` | `output/<Company_Name>/` |
-| Cover letter | `Gaurav_Cover-<Company>-<Title>.pdf` (+ `.html` build artifact) | `output/<Company_Name>/` |
+| Cover letter | `Gaurav_CL-<Company>-<RoleToken>_<YYYY-MM-DD>.pdf` (+ `.html` build artifact, + `.txt` plain-text copy). `<RoleToken>` reuses the same token as that role's tailored CV filename | `output/<Company_Name>/` |
 | Resume generation log | `resume_log.csv` (one row per `.html`→PDF conversion) | `output/` |
 
 `<Company_Name>` is the company name with spaces replaced by underscores and special characters stripped (e.g., `output/Apple/`, `output/Woven_By_Toyota/`). The JD file also includes a `Job URL:` field in its header so the source link is preserved alongside the extracted content. Skills always pick the file with the most recent date in the name.

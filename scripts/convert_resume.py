@@ -2,8 +2,8 @@
 """
 PostToolUse hook: converts resume files to PDF. Cross-platform replacement
 for convert_resume.ps1 (Windows-only).
-  *_Resume_*.html -> measure_resume.measure() (Playwright) -> .pdf
-  *_Resume_*.md   -> build_resume.build_docx() -> .docx -> docx2pdf -> .pdf
+  *_CV_*.html (or legacy *_Resume_*.html) -> measure_resume.measure() (Playwright) -> .pdf
+  *_CV_*.md   (or legacy *_Resume_*.md)   -> build_resume.build_docx() -> .docx -> docx2pdf -> .pdf
 Receives Claude tool event JSON on stdin.
 
 Note: docx2pdf drives Microsoft Word (COM on Windows, AppleScript on macOS)
@@ -40,9 +40,9 @@ def main():
     if not file_path.exists():
         return
 
-    if re.search(r"_Resume_.*\.html$", file_path.name):
+    if re.search(r"_(?:CV|Resume)_.*\.html$", file_path.name):
         convert_html(file_path)
-    elif re.search(r"_Resume_.*\.md$", file_path.name):
+    elif re.search(r"_(?:CV|Resume)_.*\.md$", file_path.name):
         convert_md(file_path)
 
 
