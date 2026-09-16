@@ -2,8 +2,8 @@
 """
 PostToolUse hook: converts resume files to PDF. Cross-platform replacement
 for convert_resume.ps1 (Windows-only).
-  *_Resume_*.html -> measure_resume.measure() (Playwright) -> .pdf
-  *_Resume_*.md   -> build_resume.build_docx() -> .docx -> docx2pdf -> .pdf
+  *_CV_*.html (or legacy *_Resume_*.html) -> measure_resume.measure() (Playwright) -> .pdf
+  *_CV_*.md   (or legacy *_Resume_*.md)   -> build_resume.build_docx() -> .docx -> docx2pdf -> .pdf
 Receives Claude tool event JSON on stdin.
 
 Note: docx2pdf drives Microsoft Word (COM on Windows, AppleScript on macOS)
@@ -40,23 +40,35 @@ def main():
     if not file_path.exists():
         return
 
-    if re.search(r"_Resume_.*\.html$", file_path.name):
+    if re.search(r"_(?:CV|Resume)_.*\.html$", file_path.name):
         convert_html(file_path)
-    elif re.search(r"_Resume_.*\.md$", file_path.name):
+    elif re.search(r"_(?:CV|Resume)_.*\.md$", file_path.name):
         convert_md(file_path)
+
+
+def target_pages_from_filename(name: str) -> float:
+    if re.search(r"_2p_", name):
+        return 2.0
+    if re.search(r"_1p5_", name):
+        return 1.5
+    return 1.0
 
 
 def convert_html(file_path: Path):
     import measure_resume
 
     pdf_path = file_path.with_suffix(".pdf")
+    target_pages = target_pages_from_filename(file_path.name)
     try:
-        result = measure_resume.measure(file_path, pdf_path)
+        result = measure_resume.measure(file_path, pdf_path, target_pages)
     except Exception as e:
         print(f"Resume HTML->PDF failed for: {file_path} ({e})")
         return
 
-    fill = result.get("fill_pct", "?")
+    # last_page_fill_pct (fill of the final page against the target page count)
+    # is the meaningful number for multi-page resumes; fill_pct alone is only
+    # correct for a 1-page target since it's content_height / one page.
+    fill = result.get("last_page_fill_pct", result.get("fill_pct", "?"))
     pages = result.get("pages", "?")
     status = result.get("status", "unknown")
 
@@ -64,7 +76,7 @@ def convert_html(file_path: Path):
         print(f"Resume HTML->PDF failed for: {file_path}")
         return
 
-    print(f"Resume converted: {file_path.stem} -> pdf | {pages} page(s), {fill}% full [{status}]")
+    print(f"Resume converted: {file_path.stem} -> pdf | {pages} page(s), last page {fill}% full [{status}]")
     log_resume(file_path, fill, pages)
 
 

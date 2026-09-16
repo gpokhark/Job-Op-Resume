@@ -3,15 +3,18 @@ name: resume-generator
 description: Generate a tailored US Letter resume (1, 1.5, or 2 pages) in markdown format from a provided main resume file and a job description or context. Use this skill whenever asked to create a resume, write a CV, tailor a resume to a job, customize for a company or role, produce a resume from a job description, or prepare a job application. Triggers on phrases like "generate resume for [company]", "create resume", "tailor my resume", "write a 2-page resume for [JD]", or any request that includes a job description and asks for a resume. Always invoke this skill — never create a resume without it.
 model: claude-haiku-4-5-20251001
 metadata:
-  version: 1.3.0
+  version: 1.6.0
 ---
 
 # Resume Generator
 
-**Version:** 1.3.0 · Last updated 2026-07-30
+**Version:** 1.6.0 · Last updated 2026-09-15
 
 | Version | Date | Change |
 |---|---|---|
+| 1.6.0 | 2026-09-15 | Fixed Step 8's page-fill measurement for 1.5/2-page resumes: `scripts/measure_resume.py` was hardcoded to a single-page (960px) target, so any 1.5/2-page draft was always reported `"overflow"` with advice to trim, even when the draft was correctly sized — a real 2-page Caterpillar CV shipped with its second page only ~74.5% full (a visibly empty last quarter-page) because there was no way to tell the script "this is supposed to be 2 pages." Added a `--target-pages` flag; the script now reports `last_page_fill_pct` against the right band for the target (88-100% for a whole-page target, ~35-70% for a `.5` target) instead of a flat single-page threshold. `convert_resume.py` (the PostToolUse hook) now infers `--target-pages` from the filename's `_2p_`/`_1p5_` suffix automatically, and logs `last_page_fill_pct` to `resume_log.csv` instead of the old `fill_pct` (which reads as a nonsensical >100% number once content spans multiple pages). Step 8 now instructs passing `--target-pages` explicitly and reading `last_page_fill_pct`, and prefers folding in unused source-resume bullets over stretching wording when expanding for underflow. |
+| 1.5.0 | 2026-09-08 | Two changes to Step 9's filename: (1) switched the filename token from `_Resume_` to `_CV_` going forward (legacy `_Resume_` files still recognized by the hook); (2) made `[RoleToken]` compact instead of spelling out full words — prefer a recognized short role acronym (`TPM`, `STE`, `SWE`, `PM`, `QE`) when one applies, otherwise truncate each significant word to ~3 letters (`ADASTesEng`), since the full-word PascalCase version from 1.4.0 made filenames too long. |
+| 1.4.0 | 2026-09-08 | Added a mandatory `[RoleToken]` component to the saved filename (Step 9) — a short PascalCase tag derived from the JD title, present for every page size — after a same-day second resume for a different role at the same company silently overwrote an earlier one under the old `[Company]_[PageSuffix][Date]` pattern, which had no way to distinguish two roles. Also noted the PostToolUse hook's `resume_log.csv` logging picks the most-recently-modified `JD_*.txt` in the folder, which can mis-attribute the role when a company folder holds more than one JD. |
 | 1.3.0 | 2026-07-30 | Updates to the resume generator skill and CLAUDE.md file. |
 | 1.2.0 | 2026-05-10 | Switched to the HTML draft + Playwright measurement automation flow. |
 | 1.1.0 | 2026-05-10 | Added a review step to the resume generator. |
@@ -293,6 +296,8 @@ This step uses `scripts/measure_resume.py` to render the draft in headless Chrom
 
 **Page geometry requirement:** every fill-percentage measurement must be taken against a US Letter page (8.5×11") with 0.5" margins on all four sides — `scripts/measure_resume.py` already renders with `format="Letter"` and `margin={top/bottom/left/right: "0.5in"}` by default, so no flags are needed, but confirm this hasn't drifted before trusting a fill-percentage result.
 
+**Always pass `--target-pages` matching the page size chosen in Step 1** (`1`, `1.5`, or `2`). The script's fill/status logic is target-aware: for a 1.5- or 2-page draft it evaluates `last_page_fill_pct` (the fill of the final physical page) against the correct band for that target, instead of comparing raw content height to a single page. Omitting the flag silently defaults to a 1-page target and will misreport a 1.5/2-page draft as `"overflow"` even when it's exactly on target — this bug produced a visibly empty last quarter-page in a real 2-page CV before the script was fixed, so don't skip the flag.
+
 ### A. Save the draft to a temp path
 
 Save the HTML to `output/[Company_Name]/_draft.html` using the Write tool. This path does **not** match the `*_Resume_*` hook pattern, so no PDF conversion runs yet.
@@ -302,26 +307,26 @@ Save the HTML to `output/[Company_Name]/_draft.html` using the Write tool. This 
 Start an internal iteration counter at **1** before the first measurement. Increment it by 1 each time you run the script again (after an adjustment). Carry this count forward to Step 10.
 
 ```bash
-uv run python scripts/measure_resume.py output/[Company_Name]/_draft.html
+uv run python scripts/measure_resume.py output/[Company_Name]/_draft.html --target-pages [1|1.5|2]
 ```
 
-The script outputs JSON. Read the `status` and `guidance` fields:
+The script outputs JSON. Read the `status`, `last_page_fill_pct`, and `guidance` fields (ignore the legacy `fill_pct` field for anything but a 1-page target — it's just `content_height / one page` and reads as a nonsensical >100% number once content spans multiple pages):
 
 | `status` | Meaning | Action |
 |---|---|---|
-| `"ok"` | 1 page, ≥88% full | Proceed to Step 9 — save final file |
-| `"overflow"` | >1 page | Trim content — see guidance for line count to remove |
-| `"underflow"` | 1 page, <88% full | Add content — see guidance for line count to add |
+| `"ok"` | Physical page count matches `--target-pages` (rounded up), and the last page's fill is in the target band (88–100% for a whole-page target; ~35–70% for a `.5` target, since a 1.5-page resume is deliberately half-full on page 2) | Proceed to Step 9 — save final file |
+| `"overflow"` | More physical pages than the target implies, or the last page is over its band | Trim content — see guidance for line count to remove |
+| `"underflow"` | Fewer physical pages than the target implies, or the last page is under its band | Add content — see guidance for line count to add |
 
 ### C. Adjust if needed (one iteration max)
 
 **Overflow:** Remove the least JD-relevant bullets from the oldest included role first. Shorten bullets that are over 28 words. Do not remove bullets from the most recent role.
 
-**Underflow:** Expand existing bullets — add scope, method, or outcome detail. Add a bullet to the oldest included role if all roles are already at minimum. Do not fabricate content.
+**Underflow:** Expand existing bullets — add scope, method, or outcome detail. Add a bullet to the oldest included role if all roles are already at minimum. Do not fabricate content. For a 1.5/2-page target, prefer folding in real, still-unused bullet content from the source resume (a role almost always has more source bullets than made it into the draft) over stretching wording — check the source resume for sentences you haven't used yet before inventing scope language.
 
-After adjusting, overwrite `_draft.html` and run the measurement script again.
+After adjusting, overwrite `_draft.html` and run the measurement script again (same `--target-pages` value).
 
-**Maximum one adjustment iteration.** If status is still not `"ok"` after one fix, proceed to Step 9 anyway and note the remaining issue to the user.
+**Maximum one adjustment iteration.** If status is still not `"ok"` after one fix, proceed to Step 9 anyway and note the remaining issue to the user — but do the arithmetic yourself against `last_page_fill_pct`, not a hand-computed total-content/total-capacity ratio (that ratio hides an underfilled last page by averaging it against an overfull first page).
 
 ### D. Quality check (run alongside measurement)
 
@@ -340,20 +345,25 @@ While the script runs, confirm:
 Once measurement status is `"ok"` (or after one iteration), save the final HTML to:
 
 ```
-output/[Company_Name]/[LastName]_Resume_[Company]_[PageSuffix][YYYY-MM-DD].html
+output/[Company_Name]/[LastName]_CV_[Company]_[RoleToken]_[PageSuffix][YYYY-MM-DD].html
 ```
 
 Where:
 - `[Company_Name]` folder: spaces → underscores, special characters stripped
 - `[LastName]`: from the resume name header
 - `[Company]`: company name from JD (shorten if long)
+- `[RoleToken]`: **always included, for every page size** — a *compact* tag derived from the JD's Job Title, so two different roles tailored for the same company on the same day never collide on filename (this happened once: a second same-day OpenAI resume silently overwrote an earlier one because the old pattern had no role component) and so the filename doesn't balloon in length. Identify the significant words in the first 2–3 words of the title (drop filler words — "a," "the," "of," "and," "for" — and stop at the first comma, pipe, or dash that introduces a sub-title/qualifier), then derive the token in two steps:
+  1. **Prefer a recognized short role acronym** if those words commonly go by one — e.g. "Technical Program Manager" → `TPM`, "Systems Test Engineer" → `STE`, "Software Engineer" → `SWE`, "Program Manager" / "Product Manager" → `PM`, "Quality Engineer" → `QE`. Use judgment; this is a filename tag, not a legal identifier, so a reasonable, readable acronym is fine even if not perfectly unambiguous.
+  2. **Otherwise, abbreviate word-by-word**: keep any word that is already an all-caps domain acronym in the title as-is (e.g. `ADAS`), and truncate every other significant word to its first ~3 letters, capitalizing just the first letter (e.g. `Tes`, `Eng`). Concatenate with no separator.
+  Examples: "Technical Program Manager, Sensors" → `TPM`; "Systems Test Engineer, End-to-End Validation" → `STE`; "ADAS Test Engineer" → `ADASTesEng`. Keep the final token short (roughly 3–10 characters) — if it's still long, drop the least distinctive word rather than spelling more out. If the exact same token would already exist for this company/date/page-size (rare), append `2`, `3`, etc.
 - `[PageSuffix]`: omit for 1-page; `_1p5_` for 1.5-page; `_2p_` for 2-page
 
-The PostToolUse hook detects `*_Resume_*.html`, runs `measure_resume.py --save-pdf`, and saves the PDF alongside the HTML automatically. No manual conversion needed.
+The PostToolUse hook detects `*_CV_*.html` (and, for files saved before 2026-09-08, the legacy `*_Resume_*.html` token), runs `measure_resume.measure()` (equivalent to `--save-pdf`), and saves the PDF alongside the HTML automatically. No manual conversion needed. The hook infers `--target-pages` from the filename itself (`_2p_` → 2, `_1p5_` → 1.5, otherwise 1) via `convert_resume.py`'s `target_pages_from_filename()`, so the `[PageSuffix]` you put in the filename is what makes the hook's own fill check and `resume_log.csv` row target-aware — get the suffix right. Note: the hook also logs to `resume_log.csv` by grabbing whichever `JD_*.txt` in the folder has the most recent mtime — if a company folder holds JD files for more than one role, save the resume for whichever JD you scraped most recently *last* (or double-check the log row after saving) since the hook can't otherwise tell which JD belongs to which resume.
 
 **Example filenames:**
-- 1 page: `output/Honda/Pokharkar_Resume_Honda_2026-05-10.html`
-- 1.5 page: `output/Honda/Pokharkar_Resume_Honda_1p5_2026-05-10.html`
+- 1 page: `output/Honda/Pokharkar_CV_Honda_ADASTesEng_2026-05-10.html`
+- 1.5 page: `output/Honda/Pokharkar_CV_Honda_ADASTesEng_1p5_2026-05-10.html`
+- 2 page: `output/OpenAI/Pokharkar_CV_OpenAI_TPM_2p_2026-09-08.html`
 
 After saving, report the measurement result to the user:
 _"Saved. PDF generated: 1 page, 94% full."_

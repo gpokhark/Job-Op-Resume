@@ -3,15 +3,16 @@ name: job-scraper
 description: Scrape a job listing URL and extract structured job data — title, location, posted date, job ID, description, responsibilities, and qualifications. Saves a JD text file ready to pass to /resume-generator. Use whenever the user gives a job URL and wants a resume generated or job data extracted. When given multiple job listing URLs at once, scrapes each in a parallel subagent, scores fit against the applicant's resume, and reports a consolidated ranking table.
 model: claude-haiku-4-5-20251001
 metadata:
-  version: 1.4.0
+  version: 1.4.1
 ---
 
 # Job Scraper
 
-**Version:** 1.4.0 · Last updated 2026-08-29
+**Version:** 1.4.1 · Last updated 2026-09-08
 
 | Version | Date | Change |
 |---|---|---|
+| 1.4.1 | 2026-09-08 | Added a `posted-date-workarounds.md` entry for Ashby job boards (`jobs.ashbyhq.com`) — no posted date in rendered content, but the public unauthenticated `api.ashbyhq.com/posting-api/job-board/<org>` endpoint exposes `publishedAt` per job, keyed by the job's UUID. Verified on one OpenAI listing. |
 | 1.4.0 | 2026-08-29 | Reversed the Phenom People "not usable" conclusion — found a working technique via the site's search-results page (`phApp.ddo.eagerLoadRefineSearch.data.jobs[].postedDate`, keyed by job-ID search), distinct from and far more reliable than the confirmed-garbage detail-page JSON-LD `datePosted`. Verified stable and self-consistent across 4 jobs (11824, 11221, 12292, 11896), including two closed listings still present in the search index. Rewrote the `posted-date-workarounds.md` Phenom entry to promote this as the primary technique and clearly separate it from the known-bad detail-page field. |
 | 1.3.8 | 2026-08-29 | Added a fourth confirmed data point to the Phenom People "not usable" finding — Honda job 11221 (also closed) returned the same anomalous `datePosted: 2026-08-30` as the job 11824 re-check, suggesting all Honda/Phenom pages return one shared stamped value per day regardless of which job is requested. Pattern now settled across four checks; no further verification needed. |
 | 1.3.7 | 2026-08-29 | Re-verified the three "provisionally reliable" `posted-date-workarounds.md` entries (Astemo, Clinch/Waymo, Liferay/Honda RI) with independent second fetches — all three values came back byte-for-byte identical, upgrading each from "one job checked" to reliable, no re-verification needed before use. Also noted: a truncated `<head>`-only response on the Clinch/Waymo platform is a transient rendering timeout, not evidence of missing data — retry with a longer `wait` before concluding. |

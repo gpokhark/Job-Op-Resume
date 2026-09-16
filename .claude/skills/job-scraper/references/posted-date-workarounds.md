@@ -310,6 +310,62 @@ confirmed absence rather than an unreliable value.
 
 ---
 
+## Ashby job boards (jobs.ashbyhq.com — recognizable by the `jobs.ashbyhq.com/<org>/<job-id>`
+## URL pattern; job id is a UUID)
+
+**Technique:** The rendered page (both the plain `get` and JS-rendered `fetch`
+attempts) never shows a posted date anywhere in visible content. Ashby exposes
+a public, unauthenticated job-board API instead — no scraping or JS rendering
+needed, so this is cheaper than the normal fetch chain once you know the org
+slug (it's the first path segment after `jobs.ashbyhq.com/`):
+```
+https://api.ashbyhq.com/posting-api/job-board/<org-slug>?includeCompensation=true
+```
+This returns a JSON object with a `jobs[]` array covering every open listing
+for that org. Find the entry whose `id` matches the UUID from the job URL, and
+read its `publishedAt` field (ISO datetime, e.g.
+`"2026-09-01T16:48:47.506+00:00"`) — truncate to `YYYY-MM-DD`. The same
+response also carries the full `descriptionHtml`/`descriptionPlain`, `title`,
+`department`, `location`, and `compensation` block, so it can serve as a
+faster alternative to the page-scrape entirely if ScraplingServer is
+unavailable — this was in fact how it got verified: ScraplingServer's MCP
+connection dropped mid-scrape and a plain `curl` to this endpoint substituted
+successfully.
+
+```bash
+curl -s "https://api.ashbyhq.com/posting-api/job-board/<org-slug>?includeCompensation=true" \
+  | python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+for j in data.get('jobs', []):
+    if j.get('id') == '<job-uuid-from-url>':
+        print(j['publishedAt'])
+        break
+else:
+    print('NOT_FOUND')
+"
+```
+
+**Caveat:** Verified against OpenAI job 393b88d7-1fbc-466a-9108-a7c1bafeb8d8
+(Systems Test Engineer, End-to-End Validation, scraped 2026-09-08):
+`publishedAt` came back as `2026-09-01T16:48:47.506+00:00` — about a week in
+the past, not the current date, and not a per-crawl freshness reset. Single
+data point so far — no second fetch or second job cross-checked yet.
+
+**How to report it:** Report as a plain confirmed date, truncated to
+`YYYY-MM-DD`, no caveat suffix needed unless a future check contradicts the
+pattern above:
+```
+Posted: 2026-09-01
+```
+
+**Fallback if the job doesn't appear in the `jobs[]` array:** the listing may
+have been unpublished/closed and dropped from the public board API — fall
+back to the normal rendered-content check and, failing that, `Posted: Not
+specified`.
+
+---
+
 ## (Add new entries below as new platforms are encountered)
 
 Template for a new entry:

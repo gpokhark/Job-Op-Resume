@@ -2,15 +2,17 @@
 name: outreach-writer
 description: Write a short Dale Carnegie–style outreach email to a hiring manager or recruiter, and/or a tailored cover letter, based on the applicant's tailored resume and a job description. Use whenever asked to "write an email to the hiring manager/recruiter", "draft an outreach email", "write a cover letter", "generate a cover letter for [company]", or any request to reach out about a job application. Triggers on phrases combining an email or cover letter with a company, role, or job description. Always invoke this skill — never hand-write outreach copy without it.
 metadata:
-  version: 1.0.0
+  version: 1.2.0
 ---
 
 # Outreach Writer
 
-**Version:** 1.0.0 · Last updated 2026-07-30
+**Version:** 1.2.0 · Last updated 2026-09-09
 
 | Version | Date | Change |
 |---|---|---|
+| 1.2.0 | 2026-09-09 | Cover letter filename now includes `_<YYYY-MM-DD>` (e.g. `Gaurav_CL-Honda-ADASTesEng_2026-05-10.pdf`), matching the date component `/resume-generator` already appends to the tailored CV filename — previously the cover letter had no date at all. |
+| 1.1.0 | 2026-09-08 | Cover letter filename shortened from `Gaurav_Cover-<Company>-<Title>` to `Gaurav_CL-<Company>-<RoleToken>`, reusing the same compact `<RoleToken>` `/resume-generator` now uses for tailored CV filenames — keeps the CV and cover letter for one application visibly paired and avoids overlong filenames. Cover letter is now also saved as a plain `.txt` copy alongside the PDF, for easy copy-paste. Tailored-resume glob updated to look for `*_CV_*` (resume-generator's new file token) in addition to the legacy `*_Resume_*` pattern. |
 | 1.0.0 | 2026-07-30 | Initial skill: outreach email (Dale Carnegie style, .txt) and cover letter (matched to reference PDF format, rendered via HTML → PDF). |
 
 Generates two possible deliverables from the same inputs — an applicant's tailored resume and a job description:
@@ -36,7 +38,7 @@ Generate whichever the user asked for. If the request is ambiguous ("write somet
 Read from `CLAUDE.local.md` if present (Name, Email, Phone, LinkedIn, GitHub). If absent, fall back to the top 3 lines of the main resume file (`resume/main_resume_*.md`, most recent date).
 
 ### Tailored resume for this role (preferred source)
-Use Glob to find `output/<Company_Name>/*_Resume_*.{html,md}` — the most recently dated tailored resume for this company. This is the primary source of points and keywords, since it is already JD-tailored.
+Use Glob to find `output/<Company_Name>/*_CV_*.{html,md}` (and, for files saved before 2026-09-08, the legacy `*_Resume_*.{html,md}` pattern) — the most recently dated tailored resume for this company. This is the primary source of points and keywords, since it is already JD-tailored.
 
 If no tailored resume exists yet for this company, fall back to `resume/main_resume_*.md` (most recent date) and note to the user that a tailored resume doesn't exist yet — offer to run `/resume-generator` first, but proceed with the main resume if the user wants to continue anyway.
 
@@ -229,19 +231,29 @@ Wrap the drafted content in this template (do not alter the CSS — matches the 
 Save the HTML and PDF to:
 
 ```
-output/<Company_Name>/Gaurav_Cover-<Company>-<Title>.html
-output/<Company_Name>/Gaurav_Cover-<Company>-<Title>.pdf
+output/<Company_Name>/Gaurav_CL-<Company>-<RoleToken>_<YYYY-MM-DD>.html
+output/<Company_Name>/Gaurav_CL-<Company>-<RoleToken>_<YYYY-MM-DD>.pdf
 ```
 
-Where `<Company>` and `<Title>` follow the same sanitization as JD filenames (spaces → underscores, special characters stripped, title shortened to its first 3–4 words) — reuse the exact shortened `<Company>`/`<Title>` tokens already used in that company's JD filename for consistency. No date component. Example: `output/Honda/Gaurav_Cover-Honda-Principal_ADAS_Development.pdf`.
+Where `<Company>` follows the same sanitization as JD filenames (spaces → underscores, special characters stripped), `<RoleToken>` is the same compact tag `/resume-generator` uses for this role's tailored CV filename (a recognized role acronym where one exists, e.g. `TPM`, `STE`, otherwise each significant word truncated to ~3 letters, e.g. `ADASTesEng`) — reuse the exact `<RoleToken>` already used in that company's tailored `*_CV_*` filename for this role, rather than re-deriving it, so the CV and cover letter for the same application stay visibly paired (if no tailored CV exists yet for this role, see Step 2 fallback, derive the token yourself using that same rule) — and `<YYYY-MM-DD>` is today's date, matching the date component `/resume-generator` appends to the CV filename. Example: `output/Honda/Gaurav_CL-Honda-ADASTesEng_2026-05-10.pdf`.
 
 Generate the PDF directly (the PostToolUse hook for resumes does not cover this filename pattern, so convert explicitly):
 
 ```bash
-uv run python scripts/measure_resume.py output/<Company_Name>/Gaurav_Cover-<Company>-<Title>.html --save-pdf output/<Company_Name>/Gaurav_Cover-<Company>-<Title>.pdf
+uv run python scripts/measure_resume.py output/<Company_Name>/Gaurav_CL-<Company>-<RoleToken>_<YYYY-MM-DD>.html --save-pdf output/<Company_Name>/Gaurav_CL-<Company>-<RoleToken>_<YYYY-MM-DD>.pdf
 ```
 
 At ~220 words this will almost always report `"underflow"` (well under a full page) — that is expected and correct; do **not** pad content to raise the fill percentage. Only act if the script reports `"overflow"` (more than 1 page): trim the least JD-relevant bullet, or shorten the two closing paragraphs.
+
+### Plain-text copy
+
+Also save a plain `.txt` version of the same drafted content, for easy copy-paste into an application portal or email body:
+
+```
+output/<Company_Name>/Gaurav_CL-<Company>-<RoleToken>_<YYYY-MM-DD>.txt
+```
+
+Use the exact same header block, date, recipient block, salutation, opening paragraph, transition sentence, 5 bullets, closing paragraphs, and sign-off as the HTML/PDF version — just as plain text with no HTML tags. Render each bullet as `- <Category Label>: <bullet text>` (a leading dash, plain colon after the label — no bold markup) instead of the HTML `<li><strong>` version. This is a plain-text save via the Write tool, not a PDF conversion step, so it has no measurement/fill-percentage check.
 
 ---
 
@@ -251,7 +263,8 @@ After saving, report what was generated and where, e.g.:
 
 ```
 Email saved: output/Honda/Pokharkar_Email_Honda_2026-07-18.txt (98 words)
-Cover letter saved: output/Honda/Gaurav_Cover-Honda-Principal_ADAS_Development.pdf (231 words)
+Cover letter saved: output/Honda/Gaurav_CL-Honda-ADASTesEng_2026-05-10.pdf (231 words)
+Cover letter (plain text): output/Honda/Gaurav_CL-Honda-ADASTesEng_2026-05-10.txt
 ```
 
 ---
@@ -265,4 +278,4 @@ Cover letter saved: output/Honda/Gaurav_Cover-Honda-Principal_ADAS_Development.p
 5. **Always tied to a real JD**: never generate generic, un-tailored outreach copy — a job description (file or pasted text) is required input.
 6. **Cover letter bullet count is exactly 5**, each with a bolded category label — not 4, not 6.
 7. **Email point count is exactly 3.**
-8. **File formats are fixed**: email is always plain `.txt`; cover letter is always rendered to `.pdf` (via the HTML intermediate) — never skip the PDF conversion step.
+8. **File formats are fixed**: email is always plain `.txt`; cover letter is always rendered to `.pdf` (via the HTML intermediate) — never skip the PDF conversion step — and additionally saved as a plain `.txt` copy for easy copy-paste.
