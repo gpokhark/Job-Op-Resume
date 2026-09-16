@@ -46,17 +46,29 @@ def main():
         convert_md(file_path)
 
 
+def target_pages_from_filename(name: str) -> float:
+    if re.search(r"_2p_", name):
+        return 2.0
+    if re.search(r"_1p5_", name):
+        return 1.5
+    return 1.0
+
+
 def convert_html(file_path: Path):
     import measure_resume
 
     pdf_path = file_path.with_suffix(".pdf")
+    target_pages = target_pages_from_filename(file_path.name)
     try:
-        result = measure_resume.measure(file_path, pdf_path)
+        result = measure_resume.measure(file_path, pdf_path, target_pages)
     except Exception as e:
         print(f"Resume HTML->PDF failed for: {file_path} ({e})")
         return
 
-    fill = result.get("fill_pct", "?")
+    # last_page_fill_pct (fill of the final page against the target page count)
+    # is the meaningful number for multi-page resumes; fill_pct alone is only
+    # correct for a 1-page target since it's content_height / one page.
+    fill = result.get("last_page_fill_pct", result.get("fill_pct", "?"))
     pages = result.get("pages", "?")
     status = result.get("status", "unknown")
 
@@ -64,7 +76,7 @@ def convert_html(file_path: Path):
         print(f"Resume HTML->PDF failed for: {file_path}")
         return
 
-    print(f"Resume converted: {file_path.stem} -> pdf | {pages} page(s), {fill}% full [{status}]")
+    print(f"Resume converted: {file_path.stem} -> pdf | {pages} page(s), last page {fill}% full [{status}]")
     log_resume(file_path, fill, pages)
 
 
