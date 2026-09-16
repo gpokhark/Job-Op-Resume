@@ -43,11 +43,13 @@ Pass multiple job URLs at once and it switches to **Batch Fit-Scoring Mode**: a 
 Reads `resume/main_resume_*.md` (most recent date), tailors a resume to the JD, drafts it as HTML, and iterates against a Playwright-measured page-fill check before saving:
 
 ```
-output/<Company_Name>/<LastName>_Resume_<Company>_<Date>.html
-                                                           └─→ .pdf  (Playwright, no Word required)
+output/<Company_Name>/<LastName>_CV_<Company>_<RoleToken>_<Date>.html
+                                                                  └─→ .pdf  (Playwright, no Word required)
 ```
 
-A row is also appended to `output/resume_log.csv` (date, company, role, fill %, pages, iterations). Add `1.5 page` or `2 page` to the command to change page count (default is 1 page); `_1p5_`/`_2p_` is inserted into the filename for those.
+`<RoleToken>` is a short tag derived from the JD title (a recognized acronym like `TPM`/`STE` where one applies, otherwise each significant word truncated to ~3 letters, e.g. `ADASTesEng`) — always present, so two roles at the same company on the same day never collide on filename. Add `1.5 page` or `2 page` to the command to change page count (default is 1 page); `_1p5_`/`_2p_` is inserted before the date for those.
+
+A row is also appended to `output/resume_log.csv` (date, company, role, JD URL, fill %, pages, iterations, filename). For a 1.5/2-page resume, "fill %" is the fill of the *last* page against the target page count, not raw content height — the measurement script (`scripts/measure_resume.py`) takes a `--target-pages` flag so it knows a 2-page draft's second page should read ~88-100% full, not just "over one page."
 
 ### Step 3 — Draft outreach copy
 
@@ -55,7 +57,7 @@ A row is also appended to `output/resume_log.csv` (date, company, role, fill %, 
 /outreach-writer
 ```
 
-Reads the tailored resume and JD for a company and writes, on request, a Dale Carnegie–style outreach email (`output/<Company_Name>/<LastName>_Email_<Company>_<Date>.txt`) and/or a cover letter matched to your reference letter's format (`output/<Company_Name>/Gaurav_Cover-<Company>-<Title>.pdf`).
+Reads the tailored resume and JD for a company and writes, on request, a Dale Carnegie–style outreach email (`output/<Company_Name>/<LastName>_Email_<Company>_<Date>.txt`) and/or a cover letter matched to your reference letter's format, saved as both `output/<Company_Name>/Gaurav_CL-<Company>-<RoleToken>_<Date>.pdf` and a plain-text copy (`.txt`) for easy copy-paste. `<RoleToken>` reuses the same tag as that role's tailored CV filename.
 
 ## Source resume format
 
@@ -80,16 +82,16 @@ resume/
 output/
   <Company_Name>/                ← created per job application
     JD_*.txt
-    *_Resume_*.html / .pdf       ← primary path; .md / .docx still supported (legacy/manual)
+    *_CV_*.html / .pdf           ← primary path (legacy *_Resume_* still recognized); .md / .docx still supported (legacy/manual)
     fit-report.md                ← only in job-scraper Batch Fit-Scoring Mode
     <LastName>_Email_*.txt
-    Gaurav_Cover-*.html / .pdf
+    Gaurav_CL-*.html / .pdf / .txt
   resume_log.csv                 ← one row per .html → PDF conversion
 
 scripts/
   build_resume.py                ← md → docx (python-docx, template-based)
-  measure_resume.py              ← html → pdf via Playwright, reports page fill %
-  convert_resume.py              ← PostToolUse hook (cross-platform, Write-tool only): dispatches md or html to the above
+  measure_resume.py              ← html → pdf via Playwright; --target-pages (1/1.5/2) makes fill-% checks page-size-aware
+  convert_resume.py              ← PostToolUse hook (cross-platform, Write-tool only): dispatches md or html to the above, infers --target-pages from the filename's _2p_/_1p5_ suffix
   log_resume.py                  ← appends a row to output/resume_log.csv (.html path only)
 
 .claude/
@@ -112,8 +114,8 @@ If you edit a resume outside Claude Code and need to regenerate the output files
 uv run python scripts/build_resume.py output/<Company>/<file>.md output/<Company>/<file>.docx
 uv run python -c "from docx2pdf import convert; convert('output/<Company>/<file>.docx', 'output/<Company>/<file>.pdf')"
 
-# .html resume
+# .html resume (add --target-pages 1.5 or 2 to match a non-default page size)
 uv run python scripts/measure_resume.py output/<Company>/<file>.html --save-pdf output/<Company>/<file>.pdf
 ```
 
-Cover letters use the same `.html` → `.pdf` command — the PostToolUse hook only watches `*_Resume_*` filenames, so `/outreach-writer` runs this conversion explicitly rather than relying on the hook.
+Cover letters use the same `.html` → `.pdf` command — the PostToolUse hook only watches `*_CV_*` (and, for older files, the legacy `*_Resume_*`) filenames, so `/outreach-writer` runs this conversion explicitly rather than relying on the hook.
