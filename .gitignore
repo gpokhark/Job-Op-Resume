@@ -1130,3 +1130,8 @@ resume/main_resume_*.md
 resume/Review_Evidence_*.md
 
 
+
+# Salary comparison: personal compensation data (keep only the *.example.json templates)
+config/salary_config.json
+config/offers/*
+!config/offers/*.example.json
