@@ -7,14 +7,6 @@ metadata:
 
 # Outreach Writer
 
-**Version:** 1.2.0 · Last updated 2026-09-09
-
-| Version | Date | Change |
-|---|---|---|
-| 1.2.0 | 2026-09-09 | Cover letter filename now includes `_<YYYY-MM-DD>` (e.g. `Gaurav_CL-Honda-ADASTesEng_2026-05-10.pdf`), matching the date component `/resume-generator` already appends to the tailored CV filename — previously the cover letter had no date at all. |
-| 1.1.0 | 2026-09-08 | Cover letter filename shortened from `Gaurav_Cover-<Company>-<Title>` to `Gaurav_CL-<Company>-<RoleToken>`, reusing the same compact `<RoleToken>` `/resume-generator` now uses for tailored CV filenames — keeps the CV and cover letter for one application visibly paired and avoids overlong filenames. Cover letter is now also saved as a plain `.txt` copy alongside the PDF, for easy copy-paste. Tailored-resume glob updated to look for `*_CV_*` (resume-generator's new file token) in addition to the legacy `*_Resume_*` pattern. |
-| 1.0.0 | 2026-07-30 | Initial skill: outreach email (Dale Carnegie style, .txt) and cover letter (matched to reference PDF format, rendered via HTML → PDF). |
-
 Generates two possible deliverables from the same inputs — an applicant's tailored resume and a job description:
 
 1. **Outreach email** — a short, Dale Carnegie–style email to a hiring manager or recruiter (200–250 words, 3 points). **Output: plain text (`.txt`)** — no markdown formatting, to avoid rendering artifacts when pasted into an email client.

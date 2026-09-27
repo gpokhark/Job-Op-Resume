@@ -13,10 +13,11 @@ This repo is a job-application workflow: scrape job listings, then generate tail
 | `/job-scraper <url>` | Haiku | Fetches a job listing via ScraplingServer MCP (falling back to Playwright MCP for client-rendered/bot-protected sites), extracts structured fields, writes `output/<Company_Name>/JD_<Company>_<Title>_<YYYY-MM-DD>.txt`. Given multiple URLs at once, runs **Batch Fit-Scoring Mode**: one subagent per URL scrapes the JD and scores it against the latest `main_resume_*.md`, writing `output/<Company_Name>/fit-report.md`; results are consolidated into a ranking table. |
 | `/resume-generator for JD in @<file.txt>` | (default) | Reads `resume/main_resume_*.md` (most recent date), tailors a resume (1 page by default; 1.5 or 2 page on request), drafts it as HTML, iterates against Playwright-measured page fill, and writes `output/<Company_Name>/<LastName>_CV_<Company>_<RoleToken>_<Date>.html` |
 | `/outreach-writer` | (default) | Reads the tailored CV + JD for a company, writes a Dale Carnegie–style outreach email (`<LastName>_Email_<Company>_<Date>.txt`) and/or a cover letter formatted to match the applicant's reference letter (`Gaurav_CL-<Company>-<RoleToken>_<Date>.pdf` + `.txt`) |
+| `/salary-compare` | (default) | Compares a job offer to the current package in `config/salary_config.json` (gitignored; template `config/salary_config.example.json`), researches market pay and city/state cost of living, computes taxes/break-even/negotiation numbers with `scripts/salary_compare.py`, and writes `output/<Company_Name>/negotiation-plan_<date>.md` |
 
 Skill definitions live in `.claude/skills/`. The job-scraper skill uses `mcp__ScraplingServer__get` first, escalating to `mcp__ScraplingServer__fetch` (Playwright, `wait:2000`), `mcp__ScraplingServer__stealthy_fetch`, and finally Playwright MCP directly for sites the first three attempts can't render.
 
-Each `SKILL.md` carries a `metadata.version` (semver) in its frontmatter and a changelog table under its title — bump the version and add a changelog row whenever a skill's behavior changes, not just wording.
+Each `SKILL.md` carries a `metadata.version` (semver) in its frontmatter only — no version line or changelog table in the body (it would load into context on every run). Bump the version on behavioral changes, not just wording; git history is the changelog, so put the detail in the commit message.
 
 ## Conversion pipeline
 

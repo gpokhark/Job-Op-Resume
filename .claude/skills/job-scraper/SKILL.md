@@ -8,25 +8,6 @@ metadata:
 
 # Job Scraper
 
-**Version:** 1.4.1 · Last updated 2026-09-08
-
-| Version | Date | Change |
-|---|---|---|
-| 1.4.1 | 2026-09-08 | Added a `posted-date-workarounds.md` entry for Ashby job boards (`jobs.ashbyhq.com`) — no posted date in rendered content, but the public unauthenticated `api.ashbyhq.com/posting-api/job-board/<org>` endpoint exposes `publishedAt` per job, keyed by the job's UUID. Verified on one OpenAI listing. |
-| 1.4.0 | 2026-08-29 | Reversed the Phenom People "not usable" conclusion — found a working technique via the site's search-results page (`phApp.ddo.eagerLoadRefineSearch.data.jobs[].postedDate`, keyed by job-ID search), distinct from and far more reliable than the confirmed-garbage detail-page JSON-LD `datePosted`. Verified stable and self-consistent across 4 jobs (11824, 11221, 12292, 11896), including two closed listings still present in the search index. Rewrote the `posted-date-workarounds.md` Phenom entry to promote this as the primary technique and clearly separate it from the known-bad detail-page field. |
-| 1.3.8 | 2026-08-29 | Added a fourth confirmed data point to the Phenom People "not usable" finding — Honda job 11221 (also closed) returned the same anomalous `datePosted: 2026-08-30` as the job 11824 re-check, suggesting all Honda/Phenom pages return one shared stamped value per day regardless of which job is requested. Pattern now settled across four checks; no further verification needed. |
-| 1.3.7 | 2026-08-29 | Re-verified the three "provisionally reliable" `posted-date-workarounds.md` entries (Astemo, Clinch/Waymo, Liferay/Honda RI) with independent second fetches — all three values came back byte-for-byte identical, upgrading each from "one job checked" to reliable, no re-verification needed before use. Also noted: a truncated `<head>`-only response on the Clinch/Waymo platform is a transient rendering timeout, not evidence of missing data — retry with a longer `wait` before concluding. |
-| 1.3.6 | 2026-08-29 | Upgraded the Phenom People entry in `posted-date-workarounds.md` from "unreliable, usable with caveat" to "not usable at all" — re-checked Honda job 11824 after it closed and `datePosted` had advanced to a future date (`2026-08-30`, one day ahead of the actual check date) on a listing with no live content left. `datePosted` on this platform should no longer be reported to users under any caveat. |
-| 1.3.5 | 2026-08-29 | Expanded the Google Careers negative-result entry in `posted-date-workarounds.md` with three more ruled-out methods (HTTP `Last-Modified` header, Wayback Machine snapshot lookup, live network-traffic capture via Playwright) — five methods total, all confirmed dead ends, so a future scrape doesn't retry any of them. |
-| 1.3.4 | 2026-08-29 | Added a `posted-date-workarounds.md` entry recording Google Careers (google.com/about/careers) as a confirmed negative — no JSON-LD, no data blob, no date text anywhere on the page after an exhaustive check — so a future scrape skips re-searching and goes straight to "Not specified". |
-| 1.3.3 | 2026-08-29 | Added a `posted-date-workarounds.md` entry for the Liferay DDM portal at usa.honda-ri.com — no JSON-LD here; the date lives in an inline `JobOfferData.publicationDate` JS object (human-readable, not ISO) that the page itself uses to populate the applicant confirmation email, making it stronger evidence than SEO-metadata sources. |
-| 1.3.2 | 2026-08-29 | Added a `posted-date-workarounds.md` entry for the Clinch ATS platform (careers.withwaymo.com and similar `*.clinchtalent.com` sites) — plain `get` hits an AWS WAF JS challenge page, so the JSON-LD `datePosted` lookup requires `fetch` with `extraction_type: "html"` instead. Verified as a real past date (not a freshness reset) against `validThrough`. |
-| 1.3.1 | 2026-08-29 | Added a `posted-date-workarounds.md` entry for the Astemo careers CMS (`<script id="js-job-posting" type="application/ld+json">` — note the `id` attribute breaks a regex anchored to `<script type=...>` with nothing in between). `datePosted` there checked out as a real past date, not a per-crawl freshness reset like the Phenom/Honda case. |
-| 1.3.0 | 2026-08-29 | Added a Posted Date fallback: when the field isn't visible in rendered content, consult `references/posted-date-workarounds.md` for a per-platform technique (e.g. Phenom sites' JSON-LD `datePosted`) before giving up and writing "Not specified". |
-| 1.2.0 | 2026-08-13 | Added Batch Fit-Scoring Mode: multiple job URLs run as parallel subagents, each scoring fit against the resume and writing a `fit-report.md`, consolidated into one ranking table. |
-| 1.1.0 | 2026-08-13 | Added Playwright MCP fallback (Attempt 4) for JS-heavy or bot-protected listings ScraplingServer's three attempts can't fetch. |
-| 1.0.0 | 2026-05-10 | Initial working skill: ScraplingServer 3-attempt fetch chain, structured field extraction, JD `.txt` output. |
-
 Fetches a job listing URL using the ScraplingServer MCP and extracts structured job information into a text file.
 
 ---

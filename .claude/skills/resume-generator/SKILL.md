@@ -8,18 +8,6 @@ metadata:
 
 # Resume Generator
 
-**Version:** 1.6.0 · Last updated 2026-09-15
-
-| Version | Date | Change |
-|---|---|---|
-| 1.6.0 | 2026-09-15 | Fixed Step 8's page-fill measurement for 1.5/2-page resumes: `scripts/measure_resume.py` was hardcoded to a single-page (960px) target, so any 1.5/2-page draft was always reported `"overflow"` with advice to trim, even when the draft was correctly sized — a real 2-page Caterpillar CV shipped with its second page only ~74.5% full (a visibly empty last quarter-page) because there was no way to tell the script "this is supposed to be 2 pages." Added a `--target-pages` flag; the script now reports `last_page_fill_pct` against the right band for the target (88-100% for a whole-page target, ~35-70% for a `.5` target) instead of a flat single-page threshold. `convert_resume.py` (the PostToolUse hook) now infers `--target-pages` from the filename's `_2p_`/`_1p5_` suffix automatically, and logs `last_page_fill_pct` to `resume_log.csv` instead of the old `fill_pct` (which reads as a nonsensical >100% number once content spans multiple pages). Step 8 now instructs passing `--target-pages` explicitly and reading `last_page_fill_pct`, and prefers folding in unused source-resume bullets over stretching wording when expanding for underflow. |
-| 1.5.0 | 2026-09-08 | Two changes to Step 9's filename: (1) switched the filename token from `_Resume_` to `_CV_` going forward (legacy `_Resume_` files still recognized by the hook); (2) made `[RoleToken]` compact instead of spelling out full words — prefer a recognized short role acronym (`TPM`, `STE`, `SWE`, `PM`, `QE`) when one applies, otherwise truncate each significant word to ~3 letters (`ADASTesEng`), since the full-word PascalCase version from 1.4.0 made filenames too long. |
-| 1.4.0 | 2026-09-08 | Added a mandatory `[RoleToken]` component to the saved filename (Step 9) — a short PascalCase tag derived from the JD title, present for every page size — after a same-day second resume for a different role at the same company silently overwrote an earlier one under the old `[Company]_[PageSuffix][Date]` pattern, which had no way to distinguish two roles. Also noted the PostToolUse hook's `resume_log.csv` logging picks the most-recently-modified `JD_*.txt` in the folder, which can mis-attribute the role when a company folder holds more than one JD. |
-| 1.3.0 | 2026-07-30 | Updates to the resume generator skill and CLAUDE.md file. |
-| 1.2.0 | 2026-05-10 | Switched to the HTML draft + Playwright measurement automation flow. |
-| 1.1.0 | 2026-05-10 | Added a review step to the resume generator. |
-| 1.0.0 | 2026-05-10 | First commit working skill. |
-
 Generates a tailored, ATS-compatible US Letter resume in markdown format from a source resume file. A post-tool hook automatically converts the saved `.md` to `.docx` and `.pdf` — no conversion work needed from you.
 
 **Default page size: 1 page.** Use 1.5 or 2 pages only when the user explicitly requests it.
